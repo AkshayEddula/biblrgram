@@ -1,11 +1,13 @@
-import { useWarmUpBrowser } from "@/hooks/useWarmUpBrowser";
-import { useSSO } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import * as AuthSession from "expo-auth-session";
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  isSuccessResponse,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import React from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Image,
@@ -16,63 +18,45 @@ import {
 } from "react-native";
 import "../../global.css";
 
+GoogleSignin.configure({
+  webClientId:
+    "727029929883-2v3vbhrj0o86q5nsqfuskfnt2942pj78.apps.googleusercontent.com",
+});
+
 // Complete the auth session
-WebBrowser.maybeCompleteAuthSession();
 
 export default function Onboarding() {
   const router = useRouter();
-  useWarmUpBrowser();
-
-  const { startSSO } = useSSO();
-
+  const [userInfo, setUserInfo] = useState<any>(null);
   const handleGoogleSignIn = async () => {
     try {
-      console.log("Starting Google SSO flow...");
-
-      // Start the authentication process by calling `startSSO()`
-      const { createdSessionId, setActive, signIn, signUp } = await startSSO({
-        strategy: "oauth_google",
-        // For native, you must pass a scheme using AuthSession.makeRedirectUri()
-        redirectUrl: AuthSession.makeRedirectUri({
-          scheme: "biblegram",
-          path: "/oauth-callback",
-        }),
-      });
-
-      console.log("SSO flow result:", {
-        createdSessionId,
-        signInStatus: signIn?.status,
-        signUpStatus: signUp?.status,
-      });
-
-      // If sign in was successful, set the active session
-      if (createdSessionId) {
-        console.log("Session created successfully:", createdSessionId);
-        setActive!({ session: createdSessionId });
-        router.replace("/(tabs)");
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      if (isSuccessResponse(response)) {
+        console.log(response.data);
+        setUserInfo(response.data);
       } else {
-        // If there is no `createdSessionId`, there are missing requirements, such as MFA
-        // Use the `signIn` or `signUp` returned from `startSSO` to handle next steps
-        if (signIn && signIn.status === "complete") {
-          setActive!({ session: signIn.createdSessionId });
-          router.replace("/(tabs)");
-        } else if (signUp && signUp.status === "complete") {
-          setActive!({ session: signUp.createdSessionId });
-          router.replace("/(tabs)");
-        } else {
-          console.log("Additional steps required:", { signIn, signUp });
-          Alert.alert(
-            "Authentication Incomplete",
-            "Additional verification may be required. Please try again."
-          );
-        }
+        console.log("sign in was cancelled by user");
+        // sign in was cancelled by user
       }
-    } catch (err) {
-      console.error("SSO error details:", JSON.stringify(err, null, 2));
-      Alert.alert(
-        "Error",
-        `Failed to sign in with Google: ${err.message || "Unknown error"}`
-      );
+    } catch (error) {
+      if (isErrorWithCode(error)) {
+        switch (error.code) {
+          case statusCodes.IN_PROGRESS:
+            // operation (eg. sign in) already in progress
+            Alert.alert("Sign in already in progress");
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            // Android only, play services not available or outdated
+            Alert.alert("Play services not available");
+            break;
+          default:
+          // some other error happened
+        }
+      } else {
+        // an error that's not related to google sign in occurred
+        Alert.alert("An error occurred");
+      }
     }
   };
 
@@ -95,8 +79,8 @@ export default function Onboarding() {
             <View className="bg-white rounded-[24px]">
               <Image
                 source={require("../../assets/images/logo.png")}
-                width="64"
-                height="64"
+                width={64}
+                height={64}
                 className="w-48 h-48"
               />
             </View>
