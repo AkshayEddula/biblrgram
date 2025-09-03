@@ -1,0 +1,42 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  // NOTE: Update this to include the paths to all files that contain Nativewind classes.
+  content: ["./app/**/*", "./components/**/*.{js,jsx,ts,tsx}"],
+  presets: [require("nativewind/preset")],
+  theme: {
+    extend: {
+      fontFamily: {
+        CrimsonTextBold: ["CrimsonTextBold"],
+        CrimsonTextBoldItalic: ["CrimsonTextBoldItalic"],
+        CrimsonTextItalic: ["CrimsonTextItalic"],
+        CrimsonTextRegular: ["CrimsonTextRegular"],
+        CrimsonTextSemiBold: ["CrimsonTextSemiBold"],
+        CrimsonTextSemiBoldItalic: ["CrimsonTextSemiBoldItalic"],
+        PlayFairItalic: ["PlayFairItalic"],
+        PlayFairVariable: ["PlayFairVariable"],
+        InterDisplayLight: [" InterDisplayLight"],
+        InterDisplayRegular: ["InterDisplayRegular"],
+        InterDisplayMedium: [" InterDisplayMedium"],
+        InterDisplaySemiBold: [" InterDisplaySemiBold"],
+        InterDisplayBold: [" InterDisplayBold"],
+        InterDisplayExtraBold: [" InterDisplayExtraBold"],
+        InterDisplayBlack: [" InterDisplayBlack"],
+        InterLight: [" InterLight"],
+        InterRegular: ["InterRegular"],
+        InterMedium: [" InterMedium"],
+        InterSemiBold: [" InterSemiBold"],
+        InterBold: [" InterBold"],
+        InterExtraBold: [" InterExtraBold"],
+        InterBlack: [" InterBlack"],
+        GilroyLight: [" GilroyLight"],
+        GilroyRegular: ["GilroyRegular"],
+        GilroyMedium: [" GilroyMedium"],
+        GilroySemiBold: [" GilroySemiBold"],
+        GilroyBold: [" GilroyBold"],
+        GilroyExtraBold: [" GilroyExtraBold"],
+        GilroyBlack: [" GilroyBlack"],
+      },
+    },
+  },
+  plugins: [],
+};
