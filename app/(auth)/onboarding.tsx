@@ -1,13 +1,13 @@
+import { useAuth } from "@/context/UserContext";
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import {
   GoogleSignin,
-  isErrorWithCode,
   isSuccessResponse,
-  statusCodes,
 } from "@react-native-google-signin/google-signin";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
@@ -23,46 +23,77 @@ GoogleSignin.configure({
     "727029929883-2v3vbhrj0o86q5nsqfuskfnt2942pj78.apps.googleusercontent.com",
 });
 
-// Complete the auth session
-
 export default function Onboarding() {
   const router = useRouter();
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    // Redirect if already authenticated
+    if (!authLoading && user) {
+      console.log("User already authenticated, redirecting...");
+      router.replace("/home"); // Uncomment when home is ready
+    }
+  }, [user, authLoading]);
+
   const handleGoogleSignIn = async () => {
+    console.log("Google Sign-in button pressed");
+    setLoading(true);
+
     try {
+      // Step 1: Sign in with Google
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
+
       if (isSuccessResponse(response)) {
-        console.log(response.data);
-        setUserInfo(response.data);
-      } else {
-        console.log("sign in was cancelled by user");
-        // sign in was cancelled by user
-      }
-    } catch (error) {
-      if (isErrorWithCode(error)) {
-        switch (error.code) {
-          case statusCodes.IN_PROGRESS:
-            // operation (eg. sign in) already in progress
-            Alert.alert("Sign in already in progress");
-            break;
-          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-            // Android only, play services not available or outdated
-            Alert.alert("Play services not available");
-            break;
-          default:
-          // some other error happened
+        const { data } = response;
+        console.log("Google sign in successful:", data.user.email);
+
+        // Step 2: Authenticate with Supabase using Google ID token
+        const { data: authData, error: authError } =
+          await supabase.auth.signInWithIdToken({
+            provider: "google",
+            token: data.idToken!,
+          });
+
+        if (authError) {
+          console.error("Supabase authentication failed:", authError);
+          Alert.alert("Authentication Error", authError.message);
+          return;
         }
+
+        console.log(
+          "Supabase authentication successful:",
+          authData.user?.email
+        );
+
+        // The user profile will be automatically created by the database trigger
+        // The AuthContext will handle session management
+        Alert.alert("Success!", "Welcome to Bible Gram!");
+
+        // Navigation will be handled by the useEffect above
       } else {
-        // an error that's not related to google sign in occurred
-        Alert.alert("An error occurred");
+        console.log("Google sign in was cancelled");
       }
+    } catch (error: any) {
+      console.error("Sign in error:", error);
+      Alert.alert("Sign In Error", error.message || "Failed to sign in");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <SafeAreaView className="flex-1 justify-center items-center">
+        <Text className="text-lg">Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1">
-      {/* Your existing beautiful gradient background */}
       <LinearGradient
         colors={["#0F172A", "#1E293B", "#3730A3", "#7C3AED"]}
         start={{ x: 0, y: 0 }}
@@ -70,9 +101,7 @@ export default function Onboarding() {
         className="flex-1"
       />
 
-      {/* Content Container */}
       <View className="absolute inset-0 flex-1 px-5 py-16 pb-8">
-        {/* Your existing content - logo, title, features */}
         <View className="flex-1 items-start justify-start">
           {/* App Icon */}
           <View className="mb-8">
@@ -135,18 +164,23 @@ export default function Onboarding() {
           </View>
         </View>
 
-        {/* Bottom Actions - UPDATED BUTTON */}
+        {/* Sign In Button */}
         <View className="space-y-4 mb-2">
-          <TouchableOpacity className="w-full" onPress={handleGoogleSignIn}>
-            <View className="bg-white py-6 rounded-[18px] flex-row items-center justify-center shadow-lg">
+          <TouchableOpacity
+            className="w-full"
+            onPress={handleGoogleSignIn}
+            disabled={loading}
+          >
+            <View
+              className={`bg-white py-6 rounded-[18px] flex-row items-center justify-center shadow-lg ${loading ? "opacity-70" : ""}`}
+            >
               <Ionicons name="logo-google" size={24} color="#4285F4" />
               <Text className="text-gray-800 text-[16px] font-GilroyMedium ml-3">
-                Sign in with Google
+                {loading ? "Signing in..." : "Sign in with Google"}
               </Text>
             </View>
           </TouchableOpacity>
 
-          {/* Terms */}
           <Text className="text-white/50 text-xs font-GilroyRegular text-center px-8 mt-4">
             By continuing, you agree to our Terms of Service and Privacy Policy
           </Text>
